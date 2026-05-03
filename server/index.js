@@ -7,8 +7,16 @@ require('dotenv').config();
 // Initialize the express application
 const app = express();
 
-// Enable CORS for all requests
-app.use(cors());
+// Enable CORS
+const allowedOrigins = [
+    'http://localhost:3000',
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+    origin: allowedOrigins,
+    credentials: true
+}));
 
 // Enable JSON parsing for request bodies
 app.use(express.json());

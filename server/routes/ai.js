@@ -6,18 +6,61 @@ const router = express.Router();
 
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.warn("WARNING: GEMINI_API_KEY is not defined in environment variables!");
+} else {
+    console.log(`AI Route: Loaded API Key (starts with: ${apiKey.substring(0, 5)}..., length: ${apiKey.length})`);
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "dummy_key");
+
+// Using gemini-flash-latest which is verified to be available and working
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+// Helper to handle AI errors consistently
+const handleAIError = (res, err, context) => {
+    console.error(`${context} Error:`, err);
+    
+    // Check for specific rate limit or quota issues
+    const errorMessage = err.message?.toLowerCase() || "";
+    const isRateLimit = err.status === 429 || 
+                        errorMessage.includes("429") || 
+                        errorMessage.includes("quota") || 
+                        errorMessage.includes("rate limit") ||
+                        errorMessage.includes("exhausted");
+
+    if (isRateLimit) {
+        return res.status(429).json({ 
+            message: "AI quota exceeded or rate limited. If you have a billing account, please check if 'Generative Language API' is enabled and has quota. Otherwise, try again in a few minutes.",
+            details: err.message
+        });
+    }
+
+    // Handle authentication errors
+    if (errorMessage.includes("api key") || errorMessage.includes("invalid") || err.status === 401 || err.status === 403) {
+        return res.status(401).json({ 
+            message: "Invalid AI API Key. Please check your .env file.",
+            details: err.message
+        });
+    }
+
+    res.status(500).json({ 
+        message: `AI failed to ${context.toLowerCase()}`, 
+        details: err.message 
+    });
+};
 
 // --- PROTECT ALL ROUTES BELOW ---
 router.use(auth);
 
 // --- AI TEST ROUTE ---
 router.get('/test', async (req, res) => {
-
     try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ message: "GEMINI_API_KEY is missing from server .env" });
+        }
         const prompt = "Say a quick, motivating hello to a student who is using an AI Study Assistant.";
-        
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
@@ -27,14 +70,12 @@ router.get('/test', async (req, res) => {
             aiResponse: text 
         });
     } catch (err) {
-        console.error("Gemini Error:", err);
-        res.status(500).json({ message: "Failed to connect to Gemini API" });
+        handleAIError(res, err, "Test");
     }
 });
 
 // --- SUMMARIZE DOCUMENT ---
 router.post('/summarize', async (req, res) => {
-
     try {
         const { fileId } = req.body;
 
@@ -78,17 +119,12 @@ router.post('/summarize', async (req, res) => {
         res.json({ summary, cached: false });
 
     } catch (err) {
-        console.error("Summarization Error:", err);
-        if (err.status === 429) {
-            return res.status(429).json({ message: "AI is busy (Rate limit hit). Please try again in 1 minute." });
-        }
-        res.status(500).json({ message: "AI failed to generate summary" });
+        handleAIError(res, err, "Summarization");
     }
 });
 
 // --- CHAT WITH DOCUMENT ---
 router.post('/chat', async (req, res) => {
-
     try {
         const { fileId, message } = req.body;
 
@@ -126,17 +162,12 @@ router.post('/chat', async (req, res) => {
         res.json({ reply });
 
     } catch (err) {
-        console.error("Chat Error:", err);
-        if (err.status === 429) {
-            return res.status(429).json({ message: "AI is busy (Rate limit hit). Please try again in 1 minute." });
-        }
-        res.status(500).json({ message: "AI failed to respond" });
+        handleAIError(res, err, "Chat");
     }
 });
 
 // --- GENERATE QUIZ ---
 router.post('/quiz', async (req, res) => {
-
     try {
         const { fileId } = req.body;
 
@@ -190,12 +221,9 @@ router.post('/quiz', async (req, res) => {
         }
 
     } catch (err) {
-        console.error("Quiz Error:", err);
-        res.status(500).json({ message: "AI failed to generate quiz" });
+        handleAIError(res, err, "Quiz");
     }
 });
-
-
 
 
 module.exports = router;

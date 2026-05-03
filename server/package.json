@@ -1,8 +1,11 @@
 {
-  "name": "server",
+  "name": "ai-sir-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
