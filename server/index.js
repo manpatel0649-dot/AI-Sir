@@ -49,6 +49,11 @@ app.use('/api/ai', require('./routes/ai'));
 
 
 // Start the server and listen for incoming requests
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}
+
+// Export the app for Vercel Serverless Functions
+module.exports = app;
