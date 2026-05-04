@@ -1,14 +1,17 @@
 [build]
-  command = "cd client && npm install && npm run build"
+  command = "npm install --prefix server && npm install --prefix client && npm run build --prefix client"
   publish = "client/.next"
 
 [functions]
   directory = "server"
   node_bundler = "esbuild"
 
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/index/:splat"
+  to = "/.netlify/functions/index/api/:splat"
   status = 200
 
 [build.environment]
