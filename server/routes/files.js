@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { PDFParse } = require('pdf-parse');
+const pdf = require('pdf-parse-fork');
 const auth = require('../middleware/auth');
 const File = require('../models/File');
 const router = express.Router();
@@ -51,13 +51,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         // 1. Read the file into a buffer
         const dataBuffer = fs.readFileSync(req.file.path);
 
-        // 2. Parse the PDF
-        const parser = new PDFParse({ data: dataBuffer });
-        const pdfData = await parser.getText();
+        // 2. Parse the PDF using the stable fork
+        const pdfData = await pdf(dataBuffer);
         const extractedText = pdfData.text;
-        
-        // Always destroy the parser to free resources
-        await parser.destroy();
 
         // 3. Create a new file record in the database
         const newFile = new File({
