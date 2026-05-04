@@ -57,3 +57,7 @@ if (require.main === module) {
 
 // Export the app for Vercel Serverless Functions
 module.exports = app;
+
+// Export the handler for Netlify Functions
+const serverless = require('serverless-http');
+module.exports.handler = serverless(app);
