@@ -51,26 +51,16 @@ const handleAIError = (res, err, context) => {
     });
 };
 
-// --- PROTECT ALL ROUTES BELOW ---
-router.use(auth);
-
-// Middleware to check for API key presence
-const checkApiKey = (req, res, next) => {
-    if (!process.env.GEMINI_API_KEY) {
-        console.error("CRITICAL: GEMINI_API_KEY is missing from process.env at runtime!");
-        return res.status(500).json({ 
-            message: "AI API Key is missing from Server Environment. Please add GEMINI_API_KEY to your Vercel/Render Environment Variables and REDEPLOY.",
-            missingKey: true
-        });
-    }
-    next();
-};
-
-router.use(checkApiKey);
-
-// --- AI TEST ROUTE ---
+// --- AI TEST ROUTE (Public for debugging) ---
 router.get('/test', async (req, res) => {
     try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ 
+                message: "AI API Key is missing from Server Environment. Please add GEMINI_API_KEY to your Vercel/Render Environment Variables and REDEPLOY.",
+                missingKey: true
+            });
+        }
+        
         const prompt = "Say a quick, motivating hello to a student who is using an AI Study Assistant.";
         const result = await model.generateContent(prompt);
         const response = await result.response;
@@ -88,6 +78,24 @@ router.get('/test', async (req, res) => {
         handleAIError(res, err, "Test");
     }
 });
+
+// --- PROTECT ALL OTHER ROUTES BELOW ---
+router.use(auth);
+
+// Middleware to check for API key presence
+const checkApiKey = (req, res, next) => {
+    if (!process.env.GEMINI_API_KEY) {
+        console.error("CRITICAL: GEMINI_API_KEY is missing from process.env at runtime!");
+        return res.status(500).json({ 
+            message: "AI API Key is missing from Server Environment. Please add GEMINI_API_KEY to your Vercel/Render Environment Variables and REDEPLOY.",
+            missingKey: true
+        });
+    }
+    next();
+};
+
+router.use(checkApiKey);
+
 
 // --- SUMMARIZE DOCUMENT ---
 router.post('/summarize', async (req, res) => {
