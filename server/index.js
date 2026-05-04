@@ -26,9 +26,13 @@ app.use(express.json());
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("Successfully connected to MongoDB"))
-    .catch((err) => console.error("MongoDB connection error:", err));
+if (process.env.MONGODB_URI) {
+    mongoose.connect(process.env.MONGODB_URI)
+        .then(() => console.log("Successfully connected to MongoDB"))
+        .catch((err) => console.error("MongoDB connection error:", err));
+} else {
+    console.warn("WARNING: MONGODB_URI is not defined! Database features will not work.");
+}
 
 
 // A simple test route to check if the server is working
