@@ -39,8 +39,12 @@ export default function Home() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 
     (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:5000');
 
-
-  // --- AUTO SCROLL ---
+  useEffect(() => {
+    console.log("Client-side API_URL:", API_URL || "(relative)");
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      console.log("NEXT_PUBLIC_API_URL is explicitly set to:", process.env.NEXT_PUBLIC_API_URL);
+    }
+  }, [API_URL]);
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isThinking]);

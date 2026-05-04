@@ -32,7 +32,7 @@ const handleAIError = (res, err, context) => {
 
     if (isRateLimit) {
         return res.status(429).json({ 
-            message: "AI quota exceeded or rate limited. If you have a billing account, please check if 'Generative Language API' is enabled and has quota. Otherwise, try again in a few minutes.",
+            message: "AI quota exceeded or rate limited. Please check your Google AI Studio quota or try again in a few minutes.",
             details: err.message
         });
     }
@@ -40,7 +40,7 @@ const handleAIError = (res, err, context) => {
     // Handle authentication errors
     if (errorMessage.includes("api key") || errorMessage.includes("invalid") || err.status === 401 || err.status === 403) {
         return res.status(401).json({ 
-            message: "Invalid AI API Key. Please check your .env file.",
+            message: "Invalid AI API Key. If you just added it to Vercel, please REDEPLOY your project for changes to take effect.",
             details: err.message
         });
     }
@@ -54,20 +54,35 @@ const handleAIError = (res, err, context) => {
 // --- PROTECT ALL ROUTES BELOW ---
 router.use(auth);
 
+// Middleware to check for API key presence
+const checkApiKey = (req, res, next) => {
+    if (!process.env.GEMINI_API_KEY) {
+        console.error("CRITICAL: GEMINI_API_KEY is missing from process.env at runtime!");
+        return res.status(500).json({ 
+            message: "AI API Key is missing from Server Environment. Please add GEMINI_API_KEY to your Vercel/Render Environment Variables and REDEPLOY.",
+            missingKey: true
+        });
+    }
+    next();
+};
+
+router.use(checkApiKey);
+
 // --- AI TEST ROUTE ---
 router.get('/test', async (req, res) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ message: "GEMINI_API_KEY is missing from server .env" });
-        }
         const prompt = "Say a quick, motivating hello to a student who is using an AI Study Assistant.";
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
         res.json({ 
-            message: "Gemini API is connected!",
-            aiResponse: text 
+            message: "Gemini API is connected and working!",
+            aiResponse: text,
+            config: {
+                hasKey: !!process.env.GEMINI_API_KEY,
+                keyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) : "none"
+            }
         });
     } catch (err) {
         handleAIError(res, err, "Test");
